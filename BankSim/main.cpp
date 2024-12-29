@@ -14,12 +14,13 @@ class BankAccount;
 class System
 {
 public:
-    void createAccount(const string name, double initialBalance);
+    void createAccount(const string name, const string password,
+            double initialBalance);
+    BankAccount* login(const string& accountNumber, const string& password);
     BankAccount* findAccount(const string& accountNumber);
     void loadFromFile(const string& fileName);
     void saveToFile(const string& fileName);
     vector<BankAccount> getAccounts() const;
-    bool findAcc(const string& account);
 private:
     vector<BankAccount> accounts;
 };
@@ -36,222 +37,162 @@ class BankAccount
 {
 public:
     BankAccount();
-    BankAccount(string accNumber, string accName, double initialBalance);
+    BankAccount(string accNumber, string accName, string accPassword,
+    double initialBalance);
+    bool verifyPassword(const string& inputPassword) const;
     void deposit(double amount);
     void withdraw(double amount);
     double getBalance() const;
     string getAccountNumber() const;
     string getName() const;
+    string getPassword() const;
     void addTransaction(const string& description, double amount);
     void displayTransactions() const;
 private: 
     string id;
     string name;
+    string password;
     double balance;
     vector<Transaction> transactions;
 };
-void mainMenu();
+void mainMenu(System& bankingSystem);
+void accountMenu(BankAccount* account, System& bankingSystem);
+void pauseScreen();
 /*
  * 
  */
 int main(int argc, char** argv)
 {
     System bankingSystem;
-    BankAccount* verifyAccount;
-    vector<BankAccount> openAccounts;
     bankingSystem.loadFromFile("accounts.txt");
+    mainMenu(bankingSystem);
+    return 0;
+}
+void pauseScreen()
+{
+    cout << "\nPress Enter to continue...";
+    cin.ignore(numeric_limits<streamsize>::max(), '\n'); // Ignore any input buffer
+    cin.get(); // Wait for user to press Enter
+}
+void mainMenu(System& bankingSystem)
+{
     int choice;
+    string name, accountNumber, password;
     double initialDeposit;
-    double deposit, withdrawal;
-    string name;
-    string option;
-    string userAccNum;
-    string case2Option, case3Option;
+    BankAccount* loggedInAccount = nullptr;
     do
     {
-        mainMenu();
+        cout << "Welcome to the Banking System Simulation" << endl;
+        cout << "1. Create Account" << endl;
+        cout << "2. Login" << endl;
+        cout << "3. Exit" << endl;
+        cout << "Enter your choice: ";
         cin >> choice;
-
-        switch(choice)
+        
+        switch (choice)
         {
             case 1:
-                clearScreen();
                 cin.ignore();
-                cout << "    ==|Account Creation|==" << endl;
-                cout << "______________________________" << endl;
-                cout << "Please enter your first and last name: " << endl;
+                cout << "Please enter your first and last name: ";
                 getline(cin, name);
-                cout << "Please enter your initial deposit amount: ";
+                cout << "Please enter a password: ";
+                cin >> password;
+                cout << "Enter initial deposit: ";
                 cin >> initialDeposit;
-                while(initialDeposit < 0)
-                {
-                    cout << "Cannot deposit negative funds, please enter "
-                            "a positive amount: ";
-                    cin >> initialDeposit;
-                }
-                bankingSystem.createAccount(name, initialDeposit);
+                bankingSystem.createAccount(name, password, initialDeposit);
                 bankingSystem.saveToFile("accounts.txt");
-
-                cin.ignore();
                 break;
             case 2:
-                clearScreen();
                 cin.ignore();
-                cout << "        ==|Deposits|==" << endl;
-                cout << "______________________________" << endl;
-                cout << "|LOGIN|" << endl;
-                cout << "Please enter your Account number: ";
-                cin >> userAccNum;
-                verifyAccount = bankingSystem.findAccount(userAccNum);
-                if(bankingSystem.findAcc(userAccNum))
+                cout << "Account number: ";
+                cin >> accountNumber;
+                cout << "Password: ";
+                cin >> password;
+                loggedInAccount = bankingSystem.login(accountNumber, password);
+                if (loggedInAccount)
                 {
-                    do
-                    {
-                        cout << "Please enter deposit amount: " << endl;
-                        cin >> deposit;
-                        while(deposit < 0)
-                        {
-                            cout << "Cannot deposit negative funds, please "
-                                    "enter a positive amount: ";
-                            cin >> deposit;
-                        }
-                        cout << endl << "Account Number: " << userAccNum << endl
-                                << "Amount to Deposit: " << fixed << 
-                                setprecision(2) << deposit << endl;
-
-                        if(verifyAccount != nullptr)
-                        {
-                            verifyAccount->deposit(deposit);
-                        }
-                        else
-                        {
-                            cout << "Account not found." << endl;
-                        }
-                        cout << "Deposit successful! " << endl;
-                        bankingSystem.saveToFile("accounts.txt");
-
-                        cout << "Would you like to make another deposit? (y/n)" 
-                                << endl;
-                        cin >> case2Option;
-                    }while(tolower(case2Option[0]) == 'y');
-                }
-                else
-                {
-                 cout << "Account Not Found. Please enter a valid account "
-                         "number in"
-                         " order to make deposits." << endl;   
+                    accountMenu(loggedInAccount, bankingSystem);
                 }
                 break;
             case 3:
-                clearScreen();
-                cin.ignore();
-                cout << "      ==|Withdrawals|==" << endl;
-                cout << "______________________________" << endl;
-                cout << "|LOGIN|" << endl;
-                cout << "Please enter your Account number: ";
-                cin >> userAccNum;
-                verifyAccount = bankingSystem.findAccount(userAccNum);
-                if(verifyAccount != nullptr)
-                {
-                    do
-                    {
-                        cout << "Please enter withdrawal amount: " << endl;
-                        cin >> withdrawal;
-                        while(withdrawal > verifyAccount->getBalance())
-                        {
-                            cout << "Insufficient funds, please enter a valid "
-                                    "amount: ";
-                            cin >> withdrawal;
-                        }
-                        cout << endl << "Account Number: " << userAccNum << endl
-                                << "Amount to Withdraw: " << fixed << 
-                                setprecision(2) << withdrawal << endl;
-
-                        verifyAccount->withdraw(withdrawal);
-                        cout << "withdraw successful! " << endl;
-                        bankingSystem.saveToFile("accounts.txt");
-
-                        cout << "Would you like to make another withdrawal? "
-                                "(y/n)" << endl;
-                        cin >> case3Option;
-                    }while(tolower(case3Option[0]) == 'y');
-                }
-                else
-                {
-                 cout << "Account Not Found. Please enter a valid account "
-                         "number in"
-                         " order to make deposits." << endl;   
-                }
+                return;
                 break;
-            case 4:
+            default:
+                cout << "Not a valid option." << endl;
+        }
+    } while (choice != 3);
+}
+void accountMenu(BankAccount* account, System& bankingSystem)
+{
+    int choice;
+    double amount;
+    do
+    {
+        clearScreen();
+        cout << "Account Menu" << endl;
+        cout << "1. Deposit" << endl;
+        cout << "2. Withdraw" << endl;
+        cout << "3. View Balance" << endl;
+        cout << "4. Transaction History" << endl;
+        cout << "5. Logout" << endl;
+        cout << "Enter your choice: ";
+        cin >> choice;
+        
+        switch (choice)
+        {
+            case 1:
                 clearScreen();
-                cin.ignore();
-                cout << "     ==|View Balance|==" << endl;
-                cout << "______________________________" << endl;
-                cout << "|LOGIN|" << endl;
-                cout << "Please enter your Account number: ";
-                cin >> userAccNum;
-                verifyAccount = bankingSystem.findAccount(userAccNum);
-                if(verifyAccount != nullptr)
-                {
-                    clearScreen();
-                    cout << "  Account Balance" << endl;
-                    cout << "____________________" << endl;
-                    cout << "Account Number: " << 
-                            verifyAccount->getAccountNumber() << endl;
-                    cout << "Active Checking: " << verifyAccount->getBalance();
-                    cout << endl << endl;
-                }
-                else
-                {
-                 cout << "Account Not Found. Please enter a valid account "
-                         "number in order to view account balances." << endl;   
-                }
+                cout << "Enter deposit amount: $";
+                cin >> amount;
+                account->deposit(amount);
+                bankingSystem.saveToFile("accounts.txt");
+                pauseScreen();
+                break;
+            case 2:
+                clearScreen();
+                cout << "Enter withdrawal amount: $";
+                cin >> amount;
+                account->withdraw(amount);
+                bankingSystem.saveToFile("accounts.txt");
+                pauseScreen();
+                break;
+            case 3:
+                clearScreen();
+                cout << "Balance: $" << fixed << setprecision(2) 
+                        << account->getBalance() << endl;
+                pauseScreen();
+                break;
+            case 4: 
+                clearScreen();
+                account->displayTransactions();
+                pauseScreen();
                 break;
             case 5:
+                cout << "Logging out..." << endl;
                 clearScreen();
-                cin.ignore();
-                cout << "   ==|Transaction History|==" << endl;
-                cout << "______________________________" << endl;
-                cout << "|LOGIN|" << endl;
-                cout << "Please enter your Account number: ";
-                cin >> userAccNum;
-                verifyAccount = bankingSystem.findAccount(userAccNum);
-                if(verifyAccount != nullptr)
-                {
-                    clearScreen();
-                    cout << "Account Number: " << userAccNum << endl;
-                    verifyAccount->displayTransactions();
-                    cout << endl << endl;
-                }
-                else
-                {
-                 cout << "Account Not Found. Please enter a valid account "
-                         "number in order to view transaction history." << endl;   
-                }
+                return;
                 break;
-            case 6:
-                return 1;
-                break;
-            default: 
+            default:
                 cout << "Not a valid option." << endl;
-            }  
-            cout << "Return to main menu?(y/n)" << endl;
-            cin >> option;
-            clearScreen();
-        } while(tolower(option[0] == 'y'));
-    return 0;
+        }
+    } while (true);
 }
-void mainMenu()
+BankAccount* System::login(const string& accountNumber, const string& password)
+    {
+        BankAccount* account = findAccount(accountNumber);
+        if (account && account->verifyPassword(password))
+        {
+            return account;
+        }
+        else
+        {
+            cout << "Invalid account number or password." << endl;
+            return nullptr;
+        }
+    }
+bool BankAccount::verifyPassword(const string& inputPassword) const
 {
-    cout << "Welcome to the Banking System Simulation" << endl;
-    cout << "1. Create Account" << endl;
-    cout << "2. Deposit" << endl;
-    cout << "3. Withdraw" << endl;
-    cout << "4. View Balance" << endl;
-    cout << "5. Transaction History" << endl;
-    cout << "6. Exit" << endl;
-    cout << endl << "Enter your choice: ";
+    return password == inputPassword;
 }
 Transaction::Transaction()
 {
@@ -271,25 +212,13 @@ vector<BankAccount> System::getAccounts() const
 {
     return accounts;
 }
-bool System::findAcc(const string& accountNumber) 
-{
-    for (size_t i = 0; i < accounts.size(); ++i)
-    {
-        const BankAccount& account = accounts[i]; 
-        if (account.getAccountNumber() == accountNumber) 
-        {
-            return true; 
-        }
-    }
-    return false; 
-}
 void System::loadFromFile(const string& fileName)
 {
     ifstream file(fileName);
     if (file.is_open())
     {
         accounts.clear();
-        string accNumber, name;
+        string accNumber, name, password;
         double balance;
         string line;
         
@@ -298,19 +227,24 @@ void System::loadFromFile(const string& fileName)
             stringstream ss(line);
             getline(ss, accNumber, ',');
             getline(ss, name, ',');
+            getline(ss, password, ',');
             ss >> balance;
             
-            if (!accNumber.empty() && !name.empty() && ss) 
+            accNumber.erase(0, accNumber.find_first_not_of(" \t"));
+            accNumber.erase(accNumber.find_last_not_of(" \t") + 1);
+            name.erase(0, name.find_first_not_of(" \t"));
+            name.erase(name.find_last_not_of(" \t") + 1);
+            password.erase(0, password.find_first_not_of(" \t"));
+            password.erase(password.find_last_not_of(" \t") + 1);
+            
+            if (!accNumber.empty() && !name.empty() && !password.empty() && ss) 
             {
-                accounts.emplace_back(accNumber, name, balance);
+                accounts.emplace_back(accNumber, name, password, balance);
             } 
-            else
-            {
-                cout << "Skipping invalid account entry in file: " << line << endl;
-            }
         }
         file.close();
-        cout << "Accounts loaded successfully from file." << endl;
+        cout << "Accounts loaded successfully from file.";
+        clearScreen();
     }
     else
     {
@@ -324,9 +258,10 @@ void System::saveToFile(const string& fileName)
     {
         for(int i = 0; i < accounts.size(); i++)
         {
-            file << accounts[i].getAccountNumber() << ", " 
-                    << accounts[i].getName() << ", " << 
-                    accounts[i].getBalance() << endl;
+            file << accounts[i].getAccountNumber() << "," 
+                 << accounts[i].getName() << "," 
+                 << accounts[i].getPassword() << ","
+                 << accounts[i].getBalance() << endl;
         }
         file.close();
         cout << "Data saved to file" << endl;
@@ -347,10 +282,11 @@ BankAccount* System::findAccount(const string& accountNumber)
     }
     return nullptr;
 }
-void System::createAccount(const string name, double initialBalance)
+void System::createAccount(const string name, const string password,
+        double initialBalance)
 {
     string accountNumber = "ACC" + to_string(accounts.size() + 1);
-    accounts.emplace_back(accountNumber, name, initialBalance);
+    accounts.emplace_back(accountNumber, name, password, initialBalance);
     cout << endl << "Account successfully created! Account Number: " 
             << accountNumber << endl << "Name: " << name << endl << "Initial "
             "Balance: " << initialBalance << endl;
@@ -369,6 +305,10 @@ void BankAccount::displayTransactions() const
                     << setprecision(2) << transactions[i].amount << endl;
         }
     }
+}
+string BankAccount::getPassword() const
+{
+    return password;
 }
 string BankAccount::getName() const
 {
@@ -400,10 +340,12 @@ void BankAccount::deposit(double amount)
     balance+=amount;
     addTransaction("Deposit", amount);
 }
-BankAccount::BankAccount(string accNumber, string accName, double initialBalance)
+BankAccount::BankAccount(string accNumber, string accName, string accPassword,
+        double initialBalance)
 {
     id = accNumber;
     name = accName;
+    password = accPassword;
     balance = initialBalance;
     
     addTransaction("Iinitial Deposit", initialBalance);
